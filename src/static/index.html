@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>StockAI - Predict High-Efficiency Stocks</title>
+    <title>StockSense - Predictor</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -266,8 +266,8 @@
     <div class="container" style="max-width: 600px;">
         <div style="display: flex; justify-content: space-between; align-items: center;">
             <div>
-                <h1>StockAI</h1>
-                <p class="subtitle">AI-Powered Price Prediction</p>
+                <h1>StockSense</h1>
+                <p class="subtitle">Price Prediction</p>
             </div>
             <a href="/logout" style="color: var(--text-dim); text-decoration: none; font-size: 0.8rem; border: 1px solid rgba(255,255,255,0.1); padding: 0.5rem 1rem; border-radius: 1rem; transition: all 0.3s ease;" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.1)';this.style.color='var(--text-dim)'">Logout</a>
         </div>
@@ -280,6 +280,11 @@
             <button class="cat-btn" onclick="filterStocks('Mid')">Mid</button>
             <button class="cat-btn" onclick="filterStocks('Small')">Small</button>
         </div>
+
+        <div class="input-group" style="margin-top: 1rem;">
+            <input type="text" id="stockSearch" placeholder="Search by name or ticker (e.g. INFY, Tata)..." oninput="filterStocks(currentCategory)">
+        </div>
+
         <div class="stock-grid" id="stockGrid">
             <!-- Populated by JS -->
         </div>
@@ -332,21 +337,44 @@
         const stockGrid = document.getElementById('stockGrid');
         const tickerInput = document.getElementById('ticker');
         const catFilters = document.getElementById('catFilters');
-        let allStocks = [];
         let stockChart = null;
         let currentView = 'History'; // 'History' or 'RealTime'
         let currentTicker = 'RELIANCE.NS';
 
-        // Fetch and populate stock list
+        // State
+        let allStocks = [];
+        let currentCategory = 'All';
+
         async function loadStocks() {
             try {
-                const response = await fetch('/stocks');
-                allStocks = await response.json();
-                renderStocks(allStocks);
+                const res = await fetch('/stocks');
+                allStocks = await res.json();
+                filterStocks('All');
             } catch (e) {
                 stockGrid.innerHTML = '<p style="color:red; font-size:0.8rem">Failed to load stocks</p>';
             }
         }
+
+        window.filterStocks = (category) => {
+            currentCategory = category || currentCategory;
+            const search = document.getElementById('stockSearch').value.toLowerCase();
+            
+            // Update button active state
+            document.querySelectorAll('.cat-btn').forEach(btn => {
+                if (btn.id !== 'histBtn' && btn.id !== 'realBtn') {
+                    const btnLabel = btn.innerText === 'Indices' ? 'Index' : btn.innerText;
+                    btn.classList.toggle('active', btnLabel === currentCategory);
+                }
+            });
+
+            const filtered = allStocks.filter(s => {
+                const matchesCat = currentCategory === 'All' || s.cap === currentCategory;
+                const matchesSearch = s.symbol.toLowerCase().includes(search) || s.name.toLowerCase().includes(search);
+                return matchesCat && matchesSearch;
+            });
+
+            renderStocks(filtered);
+        };
 
         function renderStocks(stocks) {
             stockGrid.innerHTML = stocks.map(stock => `
@@ -356,22 +384,6 @@
                 </div>
             `).join('');
         }
-
-        window.filterStocks = (cap) => {
-            // Update UI
-            document.querySelectorAll('.cat-btn').forEach(btn => {
-                // Ignore the chart view toggle buttons
-                if (btn.id !== 'histBtn' && btn.id !== 'realBtn') {
-                    btn.classList.toggle('active', btn.innerText === cap);
-                }
-            });
-            
-            if (cap === 'All') {
-                renderStocks(allStocks);
-            } else {
-                renderStocks(allStocks.filter(s => s.cap === cap));
-            }
-        };
 
         window.selectStock = (symbol) => {
             tickerInput.value = symbol;
