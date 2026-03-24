@@ -145,6 +145,22 @@ def get_stocks(user=Depends(get_current_user)):
         raise HTTPException(status_code=401, detail="Not authenticated")
     return POPULAR_STOCKS
 
+@app.get("/debug")
+def debug_info():
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    models_dir = os.path.join(base_dir, "models")
+    try:
+        files = os.listdir(models_dir) if os.path.exists(models_dir) else []
+    except Exception as e:
+        files = [str(e)]
+    return {
+        "base_dir": base_dir,
+        "models_exists": os.path.exists(models_dir),
+        "models_files": files,
+        "cwd": os.getcwd(),
+        "sys_path": sys.path
+    }
+
 @app.get("/history/{ticker}")
 def get_history(ticker: str, user=Depends(get_current_user)):
     if not user:
