@@ -2,9 +2,9 @@ yfinance
 pandas
 numpy
 scikit-learn
-tensorflow-cpu
 fastapi
 uvicorn
 python-dotenv
 python-multipart
 joblib
+tflite-runtime

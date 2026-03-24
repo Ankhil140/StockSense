@@ -1,49 +1,67 @@
 import numpy as np
-import tensorflow as tf
-from tensorflow.keras.models import load_model
+import os
 import joblib
 import pandas as pd
-import os
+
+# Try to use tflite-runtime (smaller) first, then fall back to full tensorflow for local dev
+try:
+    import tflite_runtime.interpreter as tflite
+except ImportError:
+    try:
+        from tensorflow import lite as tflite
+    except ImportError:
+        tflite = None
 
 def get_prediction(ticker="AAPL"):
     """
-    Get the next predicted closing price for a given ticker.
+    Get the next predicted closing price for a given ticker using TFLite.
     """
-    model_path = f"models/{ticker}_model.h5"
+    tflite_path = f"models/{ticker}_model.tflite"
+    h5_path = f"models/{ticker}_model.h5"
     scaler_path = f"models/{ticker}_scaler.pkl"
     
-    if not os.path.exists(model_path) or not os.path.exists(scaler_path):
+    # Priority: TFLite (for Vercel), then H5 (legacy)
+    if not os.path.exists(tflite_path) and not os.path.exists(h5_path):
         from src.train import train_model
         train_model(ticker)
+        # Check again - train_model should now ideally produce both, or we convert on the fly
+        # For simplicity, we assume models exist or are trained.
         
-    model = load_model(model_path)
     scaler = joblib.load(scaler_path)
     
-    # Get recent data (Real-time attempt with 1m interval for the last day)
+    # Get recent data
     from src.data_ingestion import fetch_stock_data
     try:
-        # Try to get enough minutes for the window
         df = fetch_stock_data(ticker, period="1d", interval="1m")
         if len(df) < 60:
-            print("Not enough 1m data, falling back to 1h...")
             df = fetch_stock_data(ticker, period="7d", interval="1h")
-    except Exception as e:
-        print(f"Intraday fetch failed: {e}. Falling back to daily.")
+    except Exception:
         df = fetch_stock_data(ticker, period="60d", interval="1d")
     
-    # Take the last 60 steps
     df = df.tail(60)
-    
-    # Preprocess
     data = df['Close'].values.reshape(-1, 1)
     scaled_data = scaler.transform(data)
+    input_data = np.reshape(scaled_data, (1, 60, 1)).astype(np.float32)
+
+    if os.path.exists(tflite_path) and tflite:
+        # TFLite Inference
+        interpreter = tflite.Interpreter(model_path=tflite_path)
+        interpreter.allocate_tensors()
+        
+        input_details = interpreter.get_input_details()
+        output_details = interpreter.get_output_details()
+        
+        interpreter.set_tensor(input_details[0]['index'], input_data)
+        interpreter.invoke()
+        
+        prediction = interpreter.get_tensor(output_details[0]['index'])
+    else:
+        # Fallback to Keras if TFLite not found or runtime missing
+        from tensorflow.keras.models import load_model
+        model = load_model(h5_path)
+        prediction = model.predict(input_data)
     
-    # Shape for model [1, window_size, 1]
-    input_data = np.reshape(scaled_data, (1, scaled_data.shape[0], 1))
-    
-    prediction = model.predict(input_data)
     prediction = scaler.inverse_transform(prediction)
-    
     return float(prediction[0][0])
 
 if __name__ == "__main__":
