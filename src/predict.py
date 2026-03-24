@@ -13,9 +13,12 @@ def get_prediction(ticker="AAPL"):
     """
     Get the next predicted closing price for a given ticker using ONNX.
     """
-    onnx_path = f"models/{ticker}_model.onnx"
-    h5_path = f"models/{ticker}_model.h5"
-    scaler_path = f"models/{ticker}_scaler.pkl"
+    # Use absolute paths relative to this file's directory
+    # src/predict.py -> models/..
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    onnx_path = os.path.join(base_dir, "models", f"{ticker}_model.onnx")
+    h5_path = os.path.join(base_dir, "models", f"{ticker}_model.h5")
+    scaler_path = os.path.join(base_dir, "models", f"{ticker}_scaler.pkl")
     
     # Priority: ONNX (for Vercel), then H5 (local fallback)
     if not os.path.exists(onnx_path) and not os.path.exists(h5_path):
