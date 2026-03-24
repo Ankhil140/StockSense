@@ -13,16 +13,20 @@ sys.path.append(os.path.dirname(__file__))
 
 app = FastAPI(title="StockAI - DevOps Predictor")
 
-# Mock session store
-SESSIONS = {}
+import base64
 
 class LoginRequest(BaseModel):
     username: str
     password: str
 
 def get_current_user(session_id: str = Cookie(None)):
-    if session_id in SESSIONS:
-        return SESSIONS[session_id]
+    if session_id:
+        try:
+            # Simple stateless session: base64 encoded username
+            # In production, use JWT with a secret key
+            return base64.b64decode(session_id).decode('utf-8')
+        except:
+            return None
     return None
 
 class PredictionRequest(BaseModel):
@@ -49,8 +53,8 @@ def login_get():
 @app.post("/login")
 def login_post(request: LoginRequest, response: Response):
     if request.username == "admin" and request.password == "password123":
-        session_id = str(uuid.uuid4())
-        SESSIONS[session_id] = request.username
+        # Stateless session: base64 encoded username
+        session_id = base64.b64encode(request.username.encode('utf-8')).decode('utf-8')
         response.set_cookie(key="session_id", value=session_id, httponly=True)
         return {"status": "success"}
     raise HTTPException(status_code=401, detail="Invalid credentials")
