@@ -1,4 +1,5 @@
 import sys
+# Vercel entry point - Optimized for TFLite
 import os
 
 # Add the project root to the path so src can be imported
