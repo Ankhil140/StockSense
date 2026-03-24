@@ -3,29 +3,24 @@ import os
 import joblib
 import pandas as pd
 
-# Try to use tflite-runtime (smaller) first, then fall back to full tensorflow for local dev
+# Use onnxruntime for lightweight inference
 try:
-    import tflite_runtime.interpreter as tflite
+    import onnxruntime as ort
 except ImportError:
-    try:
-        from tensorflow import lite as tflite
-    except ImportError:
-        tflite = None
+    ort = None
 
 def get_prediction(ticker="AAPL"):
     """
-    Get the next predicted closing price for a given ticker using TFLite.
+    Get the next predicted closing price for a given ticker using ONNX.
     """
-    tflite_path = f"models/{ticker}_model.tflite"
+    onnx_path = f"models/{ticker}_model.onnx"
     h5_path = f"models/{ticker}_model.h5"
     scaler_path = f"models/{ticker}_scaler.pkl"
     
-    # Priority: TFLite (for Vercel), then H5 (legacy)
-    if not os.path.exists(tflite_path) and not os.path.exists(h5_path):
+    # Priority: ONNX (for Vercel), then H5 (local fallback)
+    if not os.path.exists(onnx_path) and not os.path.exists(h5_path):
         from src.train import train_model
         train_model(ticker)
-        # Check again - train_model should now ideally produce both, or we convert on the fly
-        # For simplicity, we assume models exist or are trained.
         
     scaler = joblib.load(scaler_path)
     
@@ -43,20 +38,13 @@ def get_prediction(ticker="AAPL"):
     scaled_data = scaler.transform(data)
     input_data = np.reshape(scaled_data, (1, 60, 1)).astype(np.float32)
 
-    if os.path.exists(tflite_path) and tflite:
-        # TFLite Inference
-        interpreter = tflite.Interpreter(model_path=tflite_path)
-        interpreter.allocate_tensors()
-        
-        input_details = interpreter.get_input_details()
-        output_details = interpreter.get_output_details()
-        
-        interpreter.set_tensor(input_details[0]['index'], input_data)
-        interpreter.invoke()
-        
-        prediction = interpreter.get_tensor(output_details[0]['index'])
+    if os.path.exists(onnx_path) and ort:
+        # ONNX Inference
+        session = ort.InferenceSession(onnx_path)
+        input_name = session.get_inputs()[0].name
+        prediction = session.run(None, {input_name: input_data})[0]
     else:
-        # Fallback to Keras if TFLite not found or runtime missing
+        # Fallback to Keras if ONNX not found or runtime missing
         from tensorflow.keras.models import load_model
         model = load_model(h5_path)
         prediction = model.predict(input_data)
