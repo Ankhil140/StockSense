@@ -147,7 +147,7 @@ def get_stocks(user=Depends(get_current_user)):
 
 @app.get("/debug")
 def debug_info():
-    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    base_dir = os.path.dirname(os.path.abspath(__file__))
     models_dir = os.path.join(base_dir, "models")
     try:
         files = os.listdir(models_dir) if os.path.exists(models_dir) else []
@@ -209,5 +209,5 @@ def health():
     return {"status": "healthy"}
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8005))
+    port = int(os.environ.get("PORT", 8006))
     uvicorn.run(app, host="0.0.0.0", port=port)
