@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StockAI - Predict High-Efficiency Stocks</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg: #0a0b10;
+            --card-bg: rgba(255, 255, 255, 0.05);
+            --accent: #00f2fe;
+            --accent-glow: #4facfe;
+            --text: #ffffff;
+            --text-dim: #a0a0b0;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Outfit', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-image: 
+                radial-gradient(circle at 20% 20%, rgba(79, 172, 254, 0.15) 0%, transparent 40%),
+                radial-gradient(circle at 80% 80%, rgba(0, 242, 254, 0.1) 0%, transparent 40%);
+        }
+
+        .container {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 3rem;
+            border-radius: 2rem;
+            width: 100%;
+            max-width: 450px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            background: linear-gradient(to right, var(--accent), var(--accent-glow));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        p.subtitle {
+            color: var(--text-dim);
+            margin-bottom: 2.5rem;
+            font-weight: 300;
+        }
+
+        .input-group {
+            margin-bottom: 2rem;
+            position: relative;
+        }
+
+        input {
+            width: 100%;
+            padding: 1.2rem;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 1rem;
+            color: white;
+            font-size: 1.1rem;
+            font-family: inherit;
+            box-sizing: border-box;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 15px rgba(0, 242, 254, 0.2);
+        }
+
+        button {
+            width: 100%;
+            padding: 1.2rem;
+            background: linear-gradient(to right, var(--accent), var(--accent-glow));
+            border: none;
+            border-radius: 1rem;
+            color: #000;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 242, 254, 0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .result-card {
+            margin-top: 2.5rem;
+            padding: 2rem;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 1.5rem;
+            border: 1px dashed rgba(255, 255, 255, 0.1);
+            display: none;
+        }
+
+        .result-ticker {
+            font-size: 0.9rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 0.5rem;
+        }
+
+        .result-price {
+            font-size: 3rem;
+            font-weight: 600;
+            color: var(--accent);
+        }
+
+        .loading {
+            display: none;
+            margin-top: 1rem;
+            color: var(--accent);
+            font-size: 0.9rem;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.5; }
+            50% { opacity: 1; }
+            100% { opacity: 0.5; }
+        }
+        .stock-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-bottom: 2rem;
+            max-height: 200px;
+            overflow-y: auto;
+            padding-right: 0.5rem;
+        }
+
+        .stock-grid::-webkit-scrollbar {
+            width: 4px;
+        }
+        .stock-grid::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+        }
+
+        .stock-item {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 1rem;
+            border-radius: 0.8rem;
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: all 0.3s ease;
+            text-align: left;
+        }
+
+        .stock-item:hover {
+            background: rgba(0, 242, 254, 0.1);
+            border-color: var(--accent);
+        }
+
+        .stock-item .stock-symbol {
+            font-weight: 600;
+            color: var(--accent);
+            display: block;
+        }
+
+        .stock-item .stock-name {
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .section-title {
+            text-align: left;
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 1rem;
+        }
+
+        .categories {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            justify-content: flex-start;
+        }
+
+        .cat-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-dim);
+            padding: 0.4rem 0.8rem;
+            border-radius: 2rem;
+            font-size: 0.7rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .cat-btn.active {
+            background: var(--accent);
+            color: #000;
+            border-color: var(--accent);
+        }
+
+        .chart-container {
+            margin-top: 2rem;
+            background: rgba(255, 255, 255, 0.02);
+            padding: 1rem;
+            border-radius: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .history-table {
+            margin-top: 1.5rem;
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8rem;
+            color: var(--text-dim);
+        }
+
+        .history-table th, .history-table td {
+            padding: 0.6rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .history-table th {
+            color: var(--text);
+            font-weight: 400;
+        }
+
+        .history-scroll {
+            max-height: 150px;
+            overflow-y: auto;
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container" style="max-width: 600px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <h1>StockAI</h1>
+                <p class="subtitle">AI-Powered Price Prediction</p>
+            </div>
+            <a href="/logout" style="color: var(--text-dim); text-decoration: none; font-size: 0.8rem; border: 1px solid rgba(255,255,255,0.1); padding: 0.5rem 1rem; border-radius: 1rem; transition: all 0.3s ease;" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.1)';this.style.color='var(--text-dim)'">Logout</a>
+        </div>
+        
+        <div class="section-title">Popular Stocks</div>
+        <div class="categories" id="catFilters">
+            <button class="cat-btn active" onclick="filterStocks('All')">All</button>
+            <button class="cat-btn" onclick="filterStocks('Index')">Indices</button>
+            <button class="cat-btn" onclick="filterStocks('Large')">Large</button>
+            <button class="cat-btn" onclick="filterStocks('Mid')">Mid</button>
+            <button class="cat-btn" onclick="filterStocks('Small')">Small</button>
+        </div>
+        <div class="stock-grid" id="stockGrid">
+            <!-- Populated by JS -->
+        </div>
+
+        <div class="section-title">Manual Ticker</div>
+        <div class="input-group">
+            <input type="text" id="ticker" placeholder="Enter Ticker (e.g. RELIANCE.NS)" value="RELIANCE.NS">
+        </div>
+
+        <button id="predictBtn">Analyze & Predict</button>
+
+        <div class="loading" id="loader">Processing real-time data & AI inference...</div>
+
+        <div class="result-card" id="resultCard">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <div class="result-ticker" id="resTicker">AAPL</div>
+                    <div class="result-price" id="resPrice">--</div>
+                    <div style="font-size: 0.8rem; color: var(--text-dim);">Predicted Price</div>
+                </div>
+                <div style="text-align: right;">
+                    <div class="categories" style="margin-bottom: 0;">
+                        <button class="cat-btn active" id="histBtn" onclick="switchView('History')">30D</button>
+                        <button class="cat-btn" id="realBtn" onclick="switchView('RealTime')">Live (1M)</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <canvas id="stockChart"></canvas>
+            </div>
+
+            <div class="history-scroll">
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Close Price</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyBody">
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const stockGrid = document.getElementById('stockGrid');
+        const tickerInput = document.getElementById('ticker');
+        const catFilters = document.getElementById('catFilters');
+        let allStocks = [];
+        let stockChart = null;
+        let currentView = 'History'; // 'History' or 'RealTime'
+        let currentTicker = 'RELIANCE.NS';
+
+        // Fetch and populate stock list
+        async function loadStocks() {
+            try {
+                const response = await fetch('/stocks');
+                allStocks = await response.json();
+                renderStocks(allStocks);
+            } catch (e) {
+                stockGrid.innerHTML = '<p style="color:red; font-size:0.8rem">Failed to load stocks</p>';
+            }
+        }
+
+        function renderStocks(stocks) {
+            stockGrid.innerHTML = stocks.map(stock => `
+                <div class="stock-item" onclick="selectStock('${stock.symbol}')">
+                    <span class="stock-symbol">${stock.symbol}</span>
+                    <span class="stock-name">${stock.name}</span>
+                </div>
+            `).join('');
+        }
+
+        window.filterStocks = (cap) => {
+            // Update UI
+            document.querySelectorAll('.cat-btn').forEach(btn => {
+                // Ignore the chart view toggle buttons
+                if (btn.id !== 'histBtn' && btn.id !== 'realBtn') {
+                    btn.classList.toggle('active', btn.innerText === cap);
+                }
+            });
+            
+            if (cap === 'All') {
+                renderStocks(allStocks);
+            } else {
+                renderStocks(allStocks.filter(s => s.cap === cap));
+            }
+        };
+
+        window.selectStock = (symbol) => {
+            tickerInput.value = symbol;
+            updateDisplay(symbol);
+        };
+
+        window.switchView = (view) => {
+            currentView = view;
+            document.getElementById('histBtn').classList.toggle('active', view === 'History');
+            document.getElementById('realBtn').classList.toggle('active', view === 'RealTime');
+            updateDisplay(tickerInput.value || currentTicker);
+        };
+
+        loadStocks();
+
+        function initChart(labels, data) {
+            const ctx = document.getElementById('stockChart').getContext('2d');
+            if (stockChart) stockChart.destroy();
+            
+            stockChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Price',
+                        data: data,
+                        borderColor: '#00f2fe',
+                        backgroundColor: 'rgba(0, 242, 254, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { display: false },
+                        y: { 
+                            grid: { color: 'rgba(255,255,255,0.05)' },
+                            ticks: { color: '#a0a0b0', font: { size: 10 } }
+                        }
+                    }
+                }
+            });
+        }
+
+        const btn = document.getElementById('predictBtn');
+        const loader = document.getElementById('loader');
+        const card = document.getElementById('resultCard');
+        const resPrice = document.getElementById('resPrice');
+        const resTicker = document.getElementById('resTicker');
+        const historyBody = document.getElementById('historyBody');
+
+        async function updateDisplay(ticker) {
+            if (!ticker) return;
+            currentTicker = ticker;
+            
+            btn.disabled = true;
+            loader.style.display = 'block';
+            card.style.display = 'none';
+
+            try {
+                // Fetch Data based on view
+                const dataUrl = currentView === 'History' ? `/history/${ticker}` : `/intraday/${ticker}`;
+                const histRes = await fetch(dataUrl);
+                const history = await histRes.json();
+                
+                // Fetch Prediction
+                const predRes = await fetch('/predict', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ticker: ticker })
+                });
+                const predData = await predRes.json();
+                
+                if (predRes.ok && histRes.ok) {
+                    resPrice.innerText = '$' + predData.predicted_price.toFixed(2);
+                    resTicker.innerText = predData.ticker;
+                    
+                    // Render Table
+                    historyBody.innerHTML = history.slice().reverse().map(h => `
+                        <tr>
+                            <td>${h.date || h.time}</td>
+                            <td>$${h.price.toFixed(2)}</td>
+                        </tr>
+                    `).join('');
+
+                    // Render Chart
+                    const labels = history.map(h => h.date || h.time);
+                    const prices = history.map(h => h.price);
+                    initChart(labels, prices);
+
+                    card.style.display = 'block';
+                } else {
+                    alert('Error: ' + (predData.detail || 'Failed to fetch data'));
+                }
+            } catch (error) {
+                alert('Service error. Check backend.');
+            } finally {
+                btn.disabled = false;
+                loader.style.display = 'none';
+            }
+        }
+
+        btn.addEventListener('click', () => {
+            updateDisplay(tickerInput.value.trim().toUpperCase());
+        });
+    </script>
+</body>
+</html>

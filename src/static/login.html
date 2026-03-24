@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StockAI - Login</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0a0b10;
+            --card-bg: rgba(255, 255, 255, 0.05);
+            --accent: #00f2fe;
+            --accent-glow: #4facfe;
+            --text: #ffffff;
+            --text-dim: #a0a0b0;
+            --error: #ff4b2b;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Outfit', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-image: 
+                radial-gradient(circle at 20% 20%, rgba(79, 172, 254, 0.15) 0%, transparent 40%),
+                radial-gradient(circle at 80% 80%, rgba(0, 242, 254, 0.1) 0%, transparent 40%);
+        }
+
+        .login-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 3.5rem;
+            border-radius: 2.5rem;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            background: linear-gradient(to right, var(--accent), var(--accent-glow));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            color: var(--text-dim);
+            margin-bottom: 2.5rem;
+            font-weight: 300;
+            font-size: 0.9rem;
+        }
+
+        .input-group {
+            margin-bottom: 1.5rem;
+            text-align: left;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-dim);
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        input {
+            width: 100%;
+            padding: 1.2rem;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 1rem;
+            color: white;
+            font-size: 1rem;
+            font-family: inherit;
+            box-sizing: border-box;
+            transition: all 0.3s ease;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 15px rgba(0, 242, 254, 0.2);
+        }
+
+        .error-msg {
+            color: var(--error);
+            font-size: 0.85rem;
+            margin-bottom: 1rem;
+            display: none;
+        }
+
+        button {
+            width: 100%;
+            padding: 1.2rem;
+            background: linear-gradient(to right, var(--accent), var(--accent-glow));
+            border: none;
+            border-radius: 1rem;
+            color: #000;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 1rem;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 242, 254, 0.3);
+        }
+
+        .links {
+            margin-top: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+        }
+
+        .links a {
+            color: var(--text-dim);
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .links a:hover {
+            color: var(--accent);
+        }
+
+        /* Modal simple style */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(10px);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-card">
+        <h1>StockAI</h1>
+        <p class="subtitle">Secure Prediction Dashboard</p>
+
+        <div class="error-msg" id="errorMsg">Invalid credentials. Please try again.</div>
+
+        <div class="input-group">
+            <label>Username</label>
+            <input type="text" id="username" placeholder="Enter username" autocomplete="off">
+        </div>
+
+        <div class="input-group">
+            <label>Password</label>
+            <input type="password" id="password" placeholder="••••••••" autocomplete="new-password">
+        </div>
+
+        <button id="loginBtn">Connect to Terminal</button>
+
+        <div class="links">
+            <a href="#" onclick="showModal()">Forgot Password?</a>
+            <a href="#">Contact Support</a>
+        </div>
+    </div>
+
+    <div class="modal" id="forgotModal" onclick="this.style.display='none'">
+        <div class="login-card" style="padding: 3rem; background: rgba(0,0,0,0.8);">
+            <h3>Recovery Service</h3>
+            <p style="color: var(--text-dim); font-size: 0.9rem;">Due to DevOps security protocols, password resets must be requested via the System Administrator.</p>
+            <p style="color: var(--accent); font-size: 0.8rem;">[Hint: admin / password123]</p>
+            <button onclick="document.getElementById('forgotModal').style.display='none'">Close</button>
+        </div>
+    </div>
+
+    <script>
+        const loginBtn = document.getElementById('loginBtn');
+        const errorMsg = document.getElementById('errorMsg');
+
+        window.showModal = () => {
+            document.getElementById('forgotModal').style.display = 'flex';
+        };
+
+        loginBtn.addEventListener('click', async () => {
+            const u = document.getElementById('username').value;
+            const p = document.getElementById('password').value;
+
+            try {
+                const res = await fetch('/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: u, password: p })
+                });
+
+                if (res.ok) {
+                    window.location.href = '/';
+                } else {
+                    errorMsg.style.display = 'block';
+                }
+            } catch (e) {
+                alert('Authentication service offline.');
+            }
+        });
+    </script>
+</body>
+</html>
